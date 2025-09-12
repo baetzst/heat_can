@@ -9,8 +9,7 @@ It contains the [Arduino CAN library](https://github.com/sandeepmistry/arduino-C
 
 ## Pinout
 
-### MCP2515 to ESP8266
-| CANboard | ESP8266 |
+| MCP2515 | ESP8266 |
 | :--- | :---- |
 | INT | D1 (GPIO5) |
 | SCK | D5 (GPIO14) |
@@ -19,9 +18,9 @@ It contains the [Arduino CAN library](https://github.com/sandeepmistry/arduino-C
 | CS | D8 (GPIO15) |
 | GND | GND |
 | VCC | 3V3 |
-### Eco-Bus Connections
-Eco-Bus    Function
-=======    ========
-1         -> GND (cable shield)
-2         -> CanL
-3         -> CanH
+
+| Eco-Bus | Function |
+| :--- | :---- |
+| 1 | GND (cable shield) |
+| 2 | CanL |
+| 3 | CanH |
