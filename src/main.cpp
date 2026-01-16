@@ -19,6 +19,8 @@ const char* mqtt_server = "mqtt.example.org";
 const int mqtt_port = 1883;
 const char* mqtt_user = "dein_username";
 const char* mqtt_password = "dein_passwort";
+const char* ota_password = "Donn1EfBu";
+const unsigned long ping_interval = 10000;
 
 const char* topic_status_conn = TOPIC_PREFIX  "status/connection";
 const char* topic_sub = TOPIC_PREFIX "cmd/#";
@@ -120,7 +122,7 @@ void setup_ota() {
   // ArduinoOTA.setHostname("heatpumpOTA");
 
   // No authentication by default
-  ArduinoOTA.setPassword("Donn1EfBu");
+  ArduinoOTA.setPassword(ota_password);
 
   // Password can be set with it's md5 value as well
   // MD5(admin) = 21232f297a57a5a743894a0e4a801fc3
@@ -196,7 +198,7 @@ static void pingStats() {
     maxrun = now - loopentry;
   }
   unsigned long interval = now - lastMsg;
-  if (interval > 10000) {
+  if (interval > ping_interval) {
     int rate = count * 1000 / interval;
     ++ping_counter;
     snprintf (msg, MSG_BUFFER_SIZE, "RSSI %d, BSSID %s interval_loop max %lu avg %d/s runt_loop max %u #%u", WiFi.RSSI(), WiFi.BSSIDstr().c_str(), max, rate, maxrun, ping_counter);
