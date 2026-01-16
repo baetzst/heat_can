@@ -16,6 +16,9 @@ Based on Basic ESP8266 MQTT example and OTA Example
 const char* ssid = "WIFI_SSID";
 const char* password = "WIFI_PASSWD";
 const char* mqtt_server = "mqtt.example.org";
+const int mqtt_port = 1883;
+const char* mqtt_user = "dein_username";
+const char* mqtt_password = "dein_passwort";
 
 const char* topic_status_conn = TOPIC_PREFIX  "status/connection";
 const char* topic_sub = TOPIC_PREFIX "cmd/#";
@@ -91,7 +94,7 @@ bool try_mqtt_reconnect() {
   lasttry = now;
   Serial.print("Attempting MQTT connection...");
   // Attempt to connect
-  if (mqttClient.connect(HOSTNAME, topic_status_conn, false, true, "Offline")) {
+  if (mqttClient.connect(HOSTNAME, mqtt_user, mqtt_password, topic_status_conn, false, true, "Offline")) {
     Serial.println("connected");
     // Once connected, publish an announcement...
     mqttClient.publish(topic_status_conn, "Online, HELLO", true);
@@ -167,7 +170,7 @@ void setup() {
   Serial.begin(115200);
   LogamaticCAN.setup();
   setup_wifi();
-  mqttClient.setServer(mqtt_server, 1883);
+  mqttClient.setServer(mqtt_server, mqtt_port);
   mqttClient.setCallback(callback);
   setup_ota();
 }
