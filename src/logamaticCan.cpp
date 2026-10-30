@@ -42,18 +42,22 @@ void logamaticCan::mqttRecv(char* topic, byte* payload, unsigned int length) {
 }
 
 void logamaticCan::handleSend(byte* payload, unsigned int length) {
-    int rtr;
-    long id;
+    unsigned int rtr;
+    unsigned long id;
+    unsigned int b[8];  // %hhx is not reliably supported, parse into unsigned int
     uint8_t data[8];
-    unsigned l = sizeof(buf) -1 < length ? sizeof(buf) : length;
+    unsigned l = length < sizeof(buf) - 1 ? length : sizeof(buf) - 1;
     memcpy(buf, payload, l);
     buf[l] = '\0';
-    int r = sscanf(buf, "%x;%lx; %hhx %hhx %hhx %hhx %hhx %hhx %hhx %hhx", 
-            &rtr, &id, &data[0], &data[1], &data[2], &data[3], 
-            &data[4], &data[5], &data[6], &data[7]);
+    int r = sscanf(buf, "%x;%lx; %x %x %x %x %x %x %x %x", 
+            &rtr, &id, &b[0], &b[1], &b[2], &b[3], 
+            &b[4], &b[5], &b[6], &b[7]);
     if (r != 10) {
         mqttPublish(TOPIC_PREFIX "can/err", "MQTT payload");
         return;
+    }
+    for (int i = 0; i < 8; i++) {
+        data[i] = b[i] & 0xff;
     }
     bool ok = CAN.beginPacket(id, 8, rtr) &&
     CAN.write(data, 8) == 8 &&
@@ -105,8 +109,11 @@ void logamaticCan::checkErrors() {
         CAN.clearEFLG();
     }
     if (tec != _tec || rec != _rec || eflg != _eflg) {
-        char buf[32];
+        char buf[48];
         int l = snprintf(buf, sizeof(buf), "EFLG:%x TEC:%x REC:%x ROF:%u", eflg, tec, rec, _recv_overflows);
+        if (l >= (int)sizeof(buf)) {
+            l = sizeof(buf) - 1;
+        }
         mqttPublishRaw(TOPIC_PREFIX "can/error/regs", (uint8_t*)buf, l, true);
     }
     _tec = tec;
