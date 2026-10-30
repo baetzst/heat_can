@@ -251,7 +251,8 @@ int MCP2515Class::parsePacket()
   if (_rxRtr) {
     _rxLength = 0;
   } else {
-    _rxLength = _rxDlc;
+    // CAN 2.0: DLC 9..15 means 8 data bytes, _rxData only holds 8
+    _rxLength = _rxDlc > 8 ? 8 : _rxDlc;
 
     for (int i = 0; i < _rxLength; i++) {
       _rxData[i] = readRegister(REG_RXBnD0(n) + i);

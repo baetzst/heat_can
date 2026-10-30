@@ -72,8 +72,13 @@ void logamaticCan::handleRecv() {
     while((sz = CAN.parsePacket()) > 0) {
         _lastrecv = millis();
         int bi = snprintf(buf, sizeof(buf), "%x;%lx;", CAN.packetRtr(), CAN.packetId());
-        while ((d = CAN.read()) >= 0) {
+        int n = 0;
+        while (n < 8 && (d = CAN.read()) >= 0) {
             bi += snprintf(buf + bi, sizeof(buf) - bi, "%02x ", d);
+            n++;
+        }
+        if (bi >= (int)sizeof(buf)) {
+            bi = sizeof(buf) - 1;  // snprintf returns the untruncated length
         }
         if (!mqttPublishRaw(TOPIC_PREFIX "can/raw/recv/", (uint8_t*)buf, bi, false)) {
             break;  // connection dropped, stop publishing until reconnect
