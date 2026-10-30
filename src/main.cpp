@@ -63,8 +63,27 @@ void setup_wifi() {
   Serial.println(WiFi.hostname());
 }
 
+bool mqttPublishRaw(const char* topic, const uint8_t* data, size_t len, bool retain) {
+  if (!mqttClient.connected()) {
+    return false;
+  }
+  bool ok = mqttClient.beginPublish(topic, len, retain)
+         && mqttClient.write(data, len) == len
+         && mqttClient.endPublish();
+  if (!ok) {
+    // Stream is possibly out of sync -> force a clean reconnect
+    Serial.println("MQTT write incomplete -> dropping connection");
+    mqttSocket.stop();
+  }
+  return ok;
+}
+
+bool mqttPublish(const char* topic, const char* msg, bool retain) {
+  return mqttPublishRaw(topic, (const uint8_t*)msg, strlen(msg), retain);
+}
+
 void publish_lockout() {
-  mqttClient.publish(topic_status_lockout, lockout ? "1" : "0", true);
+  mqttPublish(topic_status_lockout, lockout ? "1" : "0", true);
 }
 
 void callback(char* topic, byte* payload, unsigned int length) {
@@ -104,6 +123,7 @@ bool try_mqtt_reconnect() {
     mqttClient.subscribe(topic_sub);
     mqttClient.subscribe(LogamaticCAN.send_topic);
     _pub_lockout = true;
+    _burner_on = -1;  // force republish of burner state after reconnect
     return true;
   } else {
     Serial.print("failed, rc=");
@@ -203,7 +223,7 @@ static void pingStats() {
     ++ping_counter;
     snprintf (msg, MSG_BUFFER_SIZE, "RSSI %d, BSSID %s interval_loop max %lu avg %d/s runt_loop max %u #%u", WiFi.RSSI(), WiFi.BSSIDstr().c_str(), max, rate, maxrun, ping_counter);
     Serial.println(msg);
-    mqttClient.publish(topic_ping, msg);
+    mqttPublish(topic_ping, msg);
     lastMsg = now;
     count = 0;
     max = 0;
@@ -232,7 +252,7 @@ void loop() {
     int burner_on = !digitalRead(pin_burning);
     if (burner_on != _burner_on) {
       _burner_on = burner_on;
-      mqttClient.publish(TOPIC_PREFIX "status/burnerOn", burner_on ? "1" : "0", true);
+      mqttPublish(TOPIC_PREFIX "status/burnerOn", burner_on ? "1" : "0", true);
     }
 
     yield();

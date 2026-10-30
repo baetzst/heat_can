@@ -52,10 +52,7 @@ void logamaticCan::handleSend(byte* payload, unsigned int length) {
             &rtr, &id, &data[0], &data[1], &data[2], &data[3], 
             &data[4], &data[5], &data[6], &data[7]);
     if (r != 10) {
-        const char errmsg[] = "MQTT payload";
-        mqttClient.beginPublish(TOPIC_PREFIX "can/err", sizeof(errmsg), false);
-        mqttClient.write((uint8_t*)errmsg, sizeof(errmsg));
-        mqttClient.endPublish();
+        mqttPublish(TOPIC_PREFIX "can/err", "MQTT payload");
         return;
     }
     bool ok = CAN.beginPacket(id, 8, rtr) &&
@@ -63,16 +60,9 @@ void logamaticCan::handleSend(byte* payload, unsigned int length) {
     CAN.endPacket();
 
     if (!ok) {
-        const char errmsg[] = "CAN write";
-        mqttClient.beginPublish(TOPIC_PREFIX "can/error/write", sizeof(errmsg), false);
-        mqttClient.write((uint8_t*)errmsg, sizeof(errmsg));
-        mqttClient.endPublish();
+        mqttPublish(TOPIC_PREFIX "can/error/write", "CAN write");
     } else {
-        const char msg[] = "CAN write success";
-        mqttClient.beginPublish(TOPIC_PREFIX "can/dbg", sizeof(msg), false);
-        mqttClient.write((uint8_t*)msg, sizeof(msg));
-        mqttClient.endPublish();
-
+        mqttPublish(TOPIC_PREFIX "can/dbg", "CAN write success");
     }
 }
 
@@ -85,9 +75,8 @@ void logamaticCan::handleRecv() {
         while ((d = CAN.read()) >= 0) {
             bi += snprintf(buf + bi, sizeof(buf) - bi, "%02x ", d);
         }
-        if (mqttClient.beginPublish(TOPIC_PREFIX "can/raw/recv/", bi, false)) {
-            mqttClient.write((uint8_t*)buf, bi);
-            mqttClient.endPublish();
+        if (!mqttPublishRaw(TOPIC_PREFIX "can/raw/recv/", (uint8_t*)buf, bi, false)) {
+            break;  // connection dropped, stop publishing until reconnect
         }
     }
 }
@@ -113,9 +102,7 @@ void logamaticCan::checkErrors() {
     if (tec != _tec || rec != _rec || eflg != _eflg) {
         char buf[32];
         int l = snprintf(buf, sizeof(buf), "EFLG:%x TEC:%x REC:%x ROF:%u", eflg, tec, rec, _recv_overflows);
-        mqttClient.beginPublish(TOPIC_PREFIX "can/error/regs", l, true);
-        mqttClient.write((uint8_t*)buf, l);
-        mqttClient.endPublish();
+        mqttPublishRaw(TOPIC_PREFIX "can/error/regs", (uint8_t*)buf, l, true);
     }
     _tec = tec;
     _rec = rec;
