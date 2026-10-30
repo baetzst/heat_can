@@ -34,6 +34,10 @@ volatile bool lockout = false; // burner lockout
 volatile bool _pub_lockout = false;
 int _burner_on = -1;
 
+// Set on WiFi disconnect, handled in loop()
+static WiFiEventHandler wifiDisconnectHandler;
+static volatile bool wifiLost = false;
+
 const uint8_t pin_lockout = D4;
 const uint8_t pin_burning = D2;
 
@@ -46,6 +50,8 @@ void setup_wifi() {
   Serial.println(ssid);
 
   WiFi.hostname(HOSTNAME);
+  wifiDisconnectHandler = WiFi.onStationModeDisconnected(
+    [](const WiFiEventStationModeDisconnected&) { wifiLost = true; });
   WiFi.begin(ssid, password);
 
   while (WiFi.status() != WL_CONNECTED) {
@@ -234,6 +240,11 @@ static void pingStats() {
 
 void loop() {
   loopentry = millis();
+  if (wifiLost) {
+    // Never reuse a TCP session across a WiFi drop
+    wifiLost = false;
+    mqttSocket.stop();
+  }
   ArduinoOTA.handle();
   yield();
 
